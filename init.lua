@@ -21,7 +21,7 @@ function nccl.createCommunicators(devices)
       nccl.communicators[ind]=ffi.new('struct ncclComm*[?]',devices:nElement())
       local function destroy(communicators)
          for i=1,devices:nElement() do
-             C['ncclCommDestroy'](communicators[i])
+             C['ncclCommDestroy'](nccl.communicators[i])
          end
       end
       ffi.gc(nccl.communicators[ind],destroy)
