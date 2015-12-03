@@ -14,8 +14,9 @@ function nccl.createCommunicators(devices)
       for i=1,devices do devicestensor[i]=i-1 end
       devices = devicestensor       
    end       
-   local ind=0
-   for i=1,devices:nElement() do ind = ind + 2^devices[i] end
+--   local ind=0
+   local ind = ""
+   for i=1,devices:nElement() do ind = ind..string.format("%02d",devices[i]) end  -- ind = ind + 2^devices[i] end
    if not nccl.communicators[ind] then      
       --create communicator and register its garbage collector
       nccl.communicators[ind]=ffi.new('struct ncclComm*[?]',devices:nElement())
@@ -41,7 +42,7 @@ end
 --TODO allow to use empty or wrong size outputs, as long as they are on the correct GPU
 --TODO check the sizes of all the tensors
 
-function getComm(inputs,outputs,outtoinputsizeratio)   
+local function getComm(inputs,outputs,outtoinputsizeratio)   
    local ind=0
    local devices = torch.IntTensor(#inputs)         
    for i,v in ipairs(inputs) do
@@ -54,9 +55,16 @@ function getComm(inputs,outputs,outtoinputsizeratio)
    return comm,devices
 end
 
+local function checkroot(root,ntensors)
+  if root and root >= 1 and root <= ntensors then
+     return root
+  else
+    return nil
+  end
+end
 
 
-function synchronize(devices)
+local function synchronize(devices)
    for i = 1, devices:nElement() do
       cutorch.setDevice(devices[i]+1)
       cutorch.streamSynchronize(cutorch.getStream())
@@ -78,9 +86,10 @@ function nccl.allReduce(inputs, outputs, async)
    cutorch.setDevice(curDevice)   
 end
 
-function nccl.reduce(inputs,outputs,async)
+function nccl.reduce(inputs,outputs,async,root)
    curDevice = cutorch.getDevice() 
    comm,devices = getComm(inputs,outputs,1)
+   root = 1 or checkroot(root, #inputs)
    count = inputs[1]:nElement()
    outputs = outputs or inputs   
    for i=1,#inputs do
@@ -89,21 +98,22 @@ function nccl.reduce(inputs,outputs,async)
       local output
       if outputs[i] then output = outputs[i]:data() end
       C.ncclReduce(inputs[i]:data(),output,count,'ncclFloat','ncclSum',
-      devices[1],comm[i-1],stream)
+      devices[root],comm[i-1],stream)
    end
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)      
 end
 
 
-function nccl.bcast(inputs, async)
+function nccl.bcast(inputs,async,root)
    curDevice = cutorch.getDevice() 
    comm,devices = getComm(inputs,outputs,1)
+   root = 1 or checkroot(root, #inputs)
    count = inputs[1]:nElement()   
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
       stream = ffi.C.THCState_getCurrentStream(cutorch.getState())      
-      C.ncclBcast(inputs[i]:data(),count,'ncclFloat',devices[1],comm[i-1],stream)      
+      C.ncclBcast(inputs[i]:data(),count,'ncclFloat',devices[root],comm[i-1],stream)      
    end
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)      

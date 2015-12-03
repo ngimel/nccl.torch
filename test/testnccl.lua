@@ -60,13 +60,13 @@ for i=1,opt.nsizes do
       if opt.operation == 'allReduce' then
          nccl.allReduce(inputs,outputs)
       elseif opt.operation == 'reduce' then         
-         nccl.reduce(inputs,outputs)         
+         nccl.reduce(inputs,outputs,nil,1)         
       elseif opt.operation == 'bcast' then
          for i=2,opt.nGPU do
             cutorch.setDevice(i)
             inputs[i]:fill(0)
          end
-         nccl.bcast(inputs)
+         nccl.bcast(inputs,nil,1)
       elseif opt.operation == 'allGather' then
          for i=1,opt.nGPU do
             cutorch.setDevice(i)
