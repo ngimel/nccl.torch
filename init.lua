@@ -59,7 +59,7 @@ local function checkroot(root,ntensors)
   if root and root >= 1 and root <= ntensors then
      return root
   else
-    return nil
+    return 1
   end
 end
 
@@ -89,7 +89,7 @@ end
 function nccl.reduce(inputs,outputs,async,root)
    curDevice = cutorch.getDevice() 
    comm,devices = getComm(inputs,outputs,1)
-   root = 1 or checkroot(root, #inputs)
+   root = checkroot(root, #inputs)
    count = inputs[1]:nElement()
    outputs = outputs or inputs   
    for i=1,#inputs do
@@ -108,7 +108,7 @@ end
 function nccl.bcast(inputs,async,root)
    curDevice = cutorch.getDevice() 
    comm,devices = getComm(inputs,outputs,1)
-   root = 1 or checkroot(root, #inputs)
+   root = checkroot(root, #inputs)
    count = inputs[1]:nElement()   
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
