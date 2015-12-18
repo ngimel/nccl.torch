@@ -183,13 +183,13 @@ ncclResult_t ncclAllGather(const void* sendbuff, int count, ncclDataType_t datat
 
 
 
-local ok,err = pcall(function() nccl.C = ffi.load('libnccl') end)
+local ok, res = pcall(ffi.load, 'libnccl')
 if not ok then
-   print(err)
+   print(res)
    error([['libnccl.so not found in library path.
 Please install nccl. 
 Then make sure all the files named as libnccl.so* are placed in your library load path (for example /usr/local/lib , or manually add a path to LD_LIBRARY_PATH)
 ]])
 end
 
-
+return res
