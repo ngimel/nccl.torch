@@ -4,7 +4,7 @@ local ffi = require 'ffi'
 local nccl = {}
 _G.nccl = nccl
 
-nccl.C = dofile 'ffi.lua'
+nccl.C = require 'nccl.ffi'
 nccl.communicators = {}
 
 local function errcheck(name, ...)
