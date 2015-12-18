@@ -33,7 +33,7 @@ for i=1,opt.nsizes do
       inputs[i] = torch.CudaTensor(size):fill(val)
    end
    local nrep = opt.nrepetitions   
-   local outputs 
+   local outputs, result
    if opt.outOfPlace then      
       outputs = {}
       for i=1,opt.nGPU do
@@ -75,9 +75,9 @@ for i=1,opt.nsizes do
          nccl.allGather(inputs,outputs)
       end
    end
-   elapsed=tm:time().real/nrep
-   algbw = size * sizeOfFloat / elapsed * 1e-9
-   linkbw = algbw
+   local elapsed=tm:time().real/nrep
+   local algbw = size * sizeOfFloat / elapsed * 1e-9
+   local linkbw = algbw
    if opt.operation == 'allReduce' then
       linkbw = algbw * 2 * (opt.nGPU-1)/ opt.nGPU
    elseif opt.operation == 'allGather' then
@@ -91,7 +91,7 @@ for i=1,opt.nsizes do
          expected = opt.nGPU * val
       else
          expected = opt.nGPU^(nrep) * val
-      end      
+      end
    elseif opt.operation == 'bcast' or opt.operation == 'allGather' then
       expected = val
    elseif opt.operation == 'reduce' then
@@ -100,7 +100,8 @@ for i=1,opt.nsizes do
       else
          expected = val + nrep * (opt.nGPU - 1)
       end
-   end   
+   end
+   local lastGpu
    if opt.operation == 'allReduce' or opt.operation == 'allGather' or 
       opt.operation == 'bcast' then --check results on all the gpus
       lastGpu = opt.nGPU
