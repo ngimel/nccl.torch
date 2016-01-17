@@ -11,6 +11,7 @@ local function errcheck(name, ...)
    local res = nccl.C[name](...)
    if res ~= 'ncclSuccess' then
       local msg = ffi.string(nccl.C.ncclGetErrorString(res))
+      collectgarbage('restart')
       error(msg .. ' (nccl.' .. name .. ')')
    end
    return res
@@ -80,11 +81,13 @@ function nccl.allReduce(inputs, outputs, async)
    local comm, devices = getComm(inputs, outputs)
    local count = inputs[1]:nElement()
    outputs = outputs or inputs
+   collectgarbage('stop')
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
       errcheck('ncclAllReduce', inputs[i]:data(), outputs[i]:data(), count,
          'ncclFloat','ncclSum', comm[i-1], cudaStream())
    end
+   collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
 end
@@ -95,12 +98,14 @@ function nccl.reduce(inputs, outputs, async, root)
    local count = inputs[1]:nElement()
    root = checkroot(root, #inputs)
    outputs = outputs or inputs
+   collectgarbage('stop')
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
       local output = outputs[i] and outputs[i]:data() or nil
       errcheck('ncclReduce', inputs[i]:data(), output, count, 'ncclFloat',
          'ncclSum', root-1, comm[i-1], cudaStream())
    end
+   collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
 end
@@ -110,11 +115,13 @@ function nccl.bcast(inputs, async, root)
    local curDevice = cutorch.getDevice()
    local comm, devices = getComm(inputs)
    local count = inputs[1]:nElement()
+   collectgarbage('stop')
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
       errcheck('ncclBcast', inputs[i]:data(), count, 'ncclFloat',
          root-1, comm[i-1], cudaStream())
    end
+   collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
 end
@@ -124,11 +131,13 @@ function nccl.allGather(inputs, outputs, async)
    local comm, devices = getComm(inputs, outputs)
    local count = inputs[1]:nElement()
    assert(outputs, "can not do in-place allGather")
+   collectgarbage('stop')
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
       errCheck('ncclAllGather', inputs[i]:data(), count, 'ncclFloat',
          outputs[i]:data(), comm[i-1], cudaStream())
    end
+   collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
 end
@@ -139,11 +148,13 @@ function nccl.reduceScatter(inputs, outputs, async)
    assert(outputs, "can not do in-place reduceScatter")
    assert(outputs[1], "output tensors should be allocated")
    local count = outputs[1]:nElement()
+   collectgarbage('stop')
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
       errcheck('ncclReduceScatter', inputs[i]:data(), outputs[i]:data(), count,
          'ncclFloat', 'ncclSum', comm[i-1], cudaStream())
    end
+   collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
 end
