@@ -111,7 +111,7 @@ typedef enum { ncclChar       = 0,
 /* Reduces data arrays of length count in sendbuff into recvbuf using op operation.
  * recvbuf may be NULL on all calls except for root device.
  * On the root device, sendbuff and recvbuff are assumed to reside on
- * the same device. 
+ * the same device.
  * Must be called separately for each communicator in communicator clique.
 */
 ncclResult_t ncclReduce(const void* sendbuff, void* recvbuf, int count, ncclDataType_t datatype,
@@ -124,11 +124,11 @@ ncclResult_t ncclReduce(const void* sendbuff, void* recvbuf, int count, ncclData
 ncclResult_t ncclAllReduce(const void* sendbuff, void* recvbuff, int count,
     ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm, cudaStream_t stream);
 
-/* Reduces data in sendbuff using op operation and leaves reduced result scattered 
- * over the devices so that recvbuff on the i-th GPU will contain the i-th block of 
- * the result. Sendbuff and recvbuff are assumed to reside on same device. Assumes  
- * sendbuff has size at least ndev*recvcount elements, where ndev is number of 
- * communicators in communicator clique 
+/* Reduces data in sendbuff using op operation and leaves reduced result scattered
+ * over the devices so that recvbuff on the i-th GPU will contain the i-th block of
+ * the result. Sendbuff and recvbuff are assumed to reside on same device. Assumes
+ * sendbuff has size at least ndev*recvcount elements, where ndev is number of
+ * communicators in communicator clique
  * Must be called separately for each communicator in communicator clique.*/
 ncclResult_t ncclReduceScatter(const void* sendbuff, void* recvbuff,
     int recvcount, ncclDataType_t datatype, ncclRedOp_t op, ncclComm_t comm,
@@ -182,12 +182,18 @@ ncclResult_t ncclAllGather(const void* sendbuff, int count, ncclDataType_t datat
 ]]
 
 
+local libnames = {'libnccl.so.1', 'libnccl.1.dylib'}
 
-local ok, res = pcall(ffi.load, 'libnccl')
+local ok = false
+for i=1,#libnames do
+   ok = pcall(function () res = ffi.load(libnames[i]) end)
+   if ok then break; end
+end
+
 if not ok then
    print(res)
    error([['libnccl.so not found in library path.
-Please install nccl. 
+Please install nccl.
 Then make sure all the files named as libnccl.so* are placed in your library load path (for example /usr/local/lib , or manually add a path to LD_LIBRARY_PATH)
 ]])
 end
