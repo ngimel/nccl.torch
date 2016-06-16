@@ -134,7 +134,7 @@ function nccl.allGather(inputs, outputs, async)
    collectgarbage('stop')
    for i=1,#inputs do
       cutorch.setDevice(devices[i]+1)
-      errCheck('ncclAllGather', inputs[i]:data(), count, 'ncclFloat',
+      errcheck('ncclAllGather', inputs[i]:data(), count, 'ncclFloat',
          outputs[i]:data(), comm[i-1], cudaStream())
    end
    collectgarbage('restart')
