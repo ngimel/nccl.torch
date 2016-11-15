@@ -185,6 +185,7 @@ ncclResult_t ncclAllGather(const void* sendbuff, int count, ncclDataType_t datat
 local libnames = {'libnccl.so.1', 'libnccl.1.dylib'}
 
 local ok = false
+local res
 for i=1,#libnames do
    ok = pcall(function () res = ffi.load(libnames[i]) end)
    if ok then break; end
