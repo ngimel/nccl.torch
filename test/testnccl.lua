@@ -8,7 +8,8 @@ cmd:text('nccl test script')
 cmd:text()
 cmd:text('Options:')
 cmd:option('-nGPU',               2, 'Number of GPUs to use by default')
-cmd:option('-tensorSize',       128, 'size of CudaTensor (float) to reduce')
+cmd:option('-precision',   'single', 'precision of Cuda Tensor, single, half, double')
+cmd:option('-tensorSize',       128, 'size of Cuda Tensor (precision) to reduce')
 cmd:option('-outOfPlace',          false, 'whether to perform reduction in-place or out-of-place')
 cmd:option('-operation',      'allReduce','what collective to perform, allReduce, reduce, allGather, bcast')
 cmd:option('-nsizes', 1, 'number of sizes to test')
@@ -23,14 +24,25 @@ if opt.operation == 'allGather' then opt.outOfPlace = true end
 
 
 local inputs = {}
+local function getprecision(precision)
+   if precision == 'single' then
+      return 'CudaTensor', 4
+   elseif precision == 'double' then
+      return 'CudaDoubleTensor', 8
+   elseif precision == 'half' then
+      return 'CudaHalfTensor', 2
+   else
+      error('unrecognized precision ' .. precision)
+   end
+end
 local size = opt.tensorSize
-local sizeOfFloat = 4
+local tensorType, sizeOfDatatype = getprecision(opt.precision)
 print("size\t","elapsed time\t", "alg bw\t", "link bw\t")
 local val = 1
 for i=1,opt.nsizes do
    for i=1,opt.nGPU do
       cutorch.setDevice(i)
-      inputs[i] = torch.CudaTensor(size):fill(val)
+      inputs[i] = torch[tensorType](size):fill(val)
    end
    local nrep = opt.nrepetitions   
    local outputs, result
@@ -38,7 +50,7 @@ for i=1,opt.nsizes do
       outputs = {}
       for i=1,opt.nGPU do
          cutorch.setDevice(i)
-         outputs[i] = torch.CudaTensor(size)         
+         outputs[i] = torch[tensorType](size)
       end
       result = outputs
    else
@@ -76,7 +88,7 @@ for i=1,opt.nsizes do
       end
    end
    local elapsed=tm:time().real/nrep
-   local algbw = size * sizeOfFloat / elapsed * 1e-9
+   local algbw = size * sizeOfDatatype / elapsed * 1e-9
    local linkbw = algbw
    if opt.operation == 'allReduce' then
       linkbw = algbw * 2 * (opt.nGPU-1)/ opt.nGPU
@@ -84,7 +96,7 @@ for i=1,opt.nsizes do
       algbw = algbw * opt.nGPU
       linkbw = algbw * (opt.nGPU-1)/opt.nGPU
    end
-   print(size*sizeOfFloat, elapsed, algbw, linkbw)
+   print(size*sizeOfDatatype, elapsed, algbw, linkbw)
    local expected
    if opt.operation == 'allReduce' then
       if opt.outOfPlace then
