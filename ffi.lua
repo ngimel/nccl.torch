@@ -186,13 +186,18 @@ local libnames = {'libnccl.so.1', 'libnccl.1.dylib'}
 
 local ok = false
 local res
+local err
+local errs = {}
 for i=1,#libnames do
-   ok = pcall(function () res = ffi.load(libnames[i]) end)
+   ok, err = pcall(function () res = ffi.load(libnames[i]) end)
+   errs[ libnames[i] ] = err
    if ok then break; end
 end
 
 if not ok then
-   print(res)
+   for lib, e in pairs(errs) do
+     print('Tried loading ' .. lib .. ' but got error ' .. e)
+   end
    error([['libnccl.so not found in library path.
 Please install nccl.
 Then make sure all the files named as libnccl.so* are placed in your library load path (for example /usr/local/lib , or manually add a path to LD_LIBRARY_PATH)
