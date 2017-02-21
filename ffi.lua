@@ -198,9 +198,9 @@ if not ok then
    for lib, e in pairs(errs) do
      print('Tried loading ' .. lib .. ' but got error ' .. e)
    end
-   error([['libnccl.so not found in library path.
-Please install nccl.
-Then make sure all the files named as libnccl.so* are placed in your library load path (for example /usr/local/lib , or manually add a path to LD_LIBRARY_PATH)
+   error([['libnccl.so could not be loaded, please refer to error messages above. If libnccl.so was not found, 
+please install nccl, then make sure all the files named as libnccl.so* are placed in your library load path 
+    (for example /usr/local/lib , or manually add a path to LD_LIBRARY_PATH)
 ]])
 end
 
