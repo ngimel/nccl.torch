@@ -9,7 +9,7 @@ nccl.communicators = {}
 
 local function errcheck(name, ...)
    local res = nccl.C[name](...)
-   if res ~= 'ncclSuccess' then
+   if res ~= nccl.C.ncclSuccess then
       local msg = ffi.string(nccl.C.ncclGetErrorString(res))
       collectgarbage('restart')
       error(msg .. ' (nccl.' .. name .. ')')
