@@ -4,7 +4,7 @@ local ffi = require 'ffi'
 local nccl = {}
 _G.nccl = nccl
 
-nccl.C = require 'nccl.ffi'
+nccl.C, nccl.version = table.unpack(require 'nccl.ffi')
 nccl.communicators = {}
 
 local function errcheck(name, ...)
@@ -95,11 +95,13 @@ function nccl.allReduce(inputs, outputs, async)
    local count = inputs[1]:nElement()
    outputs = outputs or inputs
    collectgarbage('stop')
+   if nccl.version == 2 then errcheck('ncclGroupStart') end
    for i=1,#inputs do
-      cutorch.setDevice(devices[i]+1)
+      if nccl.version == 1 then cutorch.setDevice(devices[i]+1) end
       errcheck('ncclAllReduce', inputs[i]:data(), outputs[i]:data(), count,
          types[i], 'ncclSum', comm[i-1], cudaStream())
    end
+   if nccl.version == 2 then errcheck('ncclGroupEnd') end
    collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
@@ -112,12 +114,14 @@ function nccl.reduce(inputs, outputs, async, root)
    root = checkroot(root, #inputs)
    outputs = outputs or inputs
    collectgarbage('stop')
+   if nccl.version == 2 then errcheck('ncclGroupStart') end
    for i=1,#inputs do
-      cutorch.setDevice(devices[i]+1)
+      if nccl.version == 1 then cutorch.setDevice(devices[i]+1) end
       local output = outputs[i] and outputs[i]:data() or nil
       errcheck('ncclReduce', inputs[i]:data(), output, count, types[i],
          'ncclSum', root-1, comm[i-1], cudaStream())
    end
+   if nccl.version == 2 then errcheck('ncclGroupEnd') end
    collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
@@ -129,11 +133,13 @@ function nccl.bcast(inputs, async, root)
    local comm, devices, types = getComm(inputs)
    local count = inputs[1]:nElement()
    collectgarbage('stop')
+   if nccl.version == 2 then errcheck('ncclGroupStart') end
    for i=1,#inputs do
-      cutorch.setDevice(devices[i]+1)
+      if nccl.version == 1 then cutorch.setDevice(devices[i]+1) end
       errcheck('ncclBcast', inputs[i]:data(), count, types[i],
          root-1, comm[i-1], cudaStream())
    end
+   if nccl.version == 2 then errcheck('ncclGroupEnd') end
    collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
@@ -143,13 +149,20 @@ function nccl.allGather(inputs, outputs, async)
    local curDevice = cutorch.getDevice()
    local comm, devices, types = getComm(inputs, outputs)
    local count = inputs[1]:nElement()
-   assert(outputs, "can not do in-place allGather")
+   assert(outputs, "in-place allGather is not implemented yet")
    collectgarbage('stop')
+   if nccl.version == 2 then errcheck('ncclGroupStart') end
    for i=1,#inputs do
-      cutorch.setDevice(devices[i]+1)
-      errcheck('ncclAllGather', inputs[i]:data(), count, types[i],
-         outputs[i]:data(), comm[i-1], cudaStream())
+      if nccl.version == 1 then
+         cutorch.setDevice(devices[i]+1)
+         errcheck('ncclAllGather', inputs[i]:data(), count, types[i],
+            outputs[i]:data(), comm[i-1], cudaStream())
+      else
+         errcheck('ncclAllGather', inputs[i]:data(), outputs[i]:data(),
+            count, types[i], comm[i-1], cudaStream())
+      end
    end
+   if nccl.version == 2 then errcheck('ncclGroupEnd') end
    collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)
@@ -158,15 +171,17 @@ end
 function nccl.reduceScatter(inputs, outputs, async)
    local curDevice = cutorch.getDevice()
    local comm, devices, types = getComm(inputs, outputs)
-   assert(outputs, "can not do in-place reduceScatter")
+   assert(outputs, "in-place reduceScatter is not implemented yet")
    assert(outputs[1], "output tensors should be allocated")
    local count = outputs[1]:nElement()
    collectgarbage('stop')
+   if nccl.version == 2 then errcheck('ncclGroupStart') end
    for i=1,#inputs do
-      cutorch.setDevice(devices[i]+1)
+      if nccl.version == 1 then cutorch.setDevice(devices[i]+1) end
       errcheck('ncclReduceScatter', inputs[i]:data(), outputs[i]:data(), count,
          types[i], 'ncclSum', comm[i-1], cudaStream())
    end
+   if nccl.version == 2 then errcheck('ncclGroupEnd') end
    collectgarbage('restart')
    if not async then synchronize(devices) end
    cutorch.setDevice(curDevice)

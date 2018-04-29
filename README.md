@@ -2,9 +2,9 @@
 Torch7 FFI bindings for NVidia NCCL library.
 
 # Installation
- - Install NCCL from https://github.com/NVIDIA/nccl
+ - Install NCCL
  - Have at least Cuda 7.0
- - Have libnccl.so in your library path 
+ - Have libnccl.so.{1|2} (or libnccl.{1|2}.dylib) either in your library path or in `NCCL_PATH`
 
 # Collective operations supported
  - allReduce
@@ -21,6 +21,3 @@ require 'nccl'
 nccl.allReduce(inputs)
 ```
 where inputs is a table of contiguous tensors of the same size located on the different devices.
-
-
-
